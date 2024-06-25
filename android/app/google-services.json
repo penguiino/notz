@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "802294275670",
+    "project_id": "notz-6b2b2",
+    "storage_bucket": "notz-6b2b2.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:802294275670:android:03d84359c2cc15a6e5a5f7",
+        "android_client_info": {
+          "package_name": "com.example.notz"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD49524AYZh9_-1IXgJvCHQKiRv-5u0ce0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
