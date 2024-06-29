@@ -34,7 +34,7 @@ class _LoginDemoState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.green[200],
+      backgroundColor: Colors.white,
       appBar: AppBar(
           title: Column(
             children: const [

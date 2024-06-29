@@ -55,7 +55,7 @@ class _ForgotDemoState extends State<ForgotPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.green[200],
+      backgroundColor: Colors.white,
       appBar: AppBar(
           title: Column(
             children: const [

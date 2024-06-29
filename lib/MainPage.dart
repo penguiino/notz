@@ -1,8 +1,9 @@
 // ignore_for_file: prefer_const_constructors
 import 'package:flutter/material.dart';
+import 'Home.dart';
 import 'LoginPage.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'Home.dart';
+
 
 class MainPage extends StatelessWidget{
   const MainPage({Key? key});
