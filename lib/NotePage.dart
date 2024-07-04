@@ -5,7 +5,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 
 class NotePage extends StatefulWidget {
-  const NotePage({Key? key}) : super(key: key);
+  final String? noteId;
+
+  const NotePage({Key? key, this.noteId}) : super(key: key);
 
   @override
   _NotePageState createState() => _NotePageState();
@@ -21,43 +23,19 @@ class _NotePageState extends State<NotePage> {
   @override
   void initState() {
     super.initState();
-    // Replace 'your_document_id' with the actual document ID you are working with
-    ensureFieldsExist('your_document_id');
+    if (widget.noteId != null) {
+      _loadNoteData(widget.noteId!);
+    }
   }
 
-  Future<void> ensureFieldsExist(String docId) async {
-    final docRef = _firestore.collection('notes').doc(docId);
-    final docSnapshot = await docRef.get();
-
-    if (!docSnapshot.exists) {
-      // Document does not exist, create it with default values
-      await docRef.set({
-        'title': 'Default Title',
-        'content': 'Default Content',
-        'timestamp': FieldValue.serverTimestamp(), // Firestore Timestamp
-        'images': [], // Empty list for images
+  Future<void> _loadNoteData(String noteId) async {
+    final doc = await _firestore.collection('notes').doc(noteId).get();
+    if (doc.exists) {
+      setState(() {
+        _titleController.text = doc['title'];
+        _contentController.text = doc['content'];
+        _images = List<String>.from(doc['images']).map((url) => File(url)).toList();
       });
-    } else {
-      // Document exists, check and update missing fields
-      final data = docSnapshot.data();
-      final Map<String, dynamic> updates = {};
-
-      if (!data!.containsKey('title') || data['title'] == null) {
-        updates['title'] = 'Default Title';
-      }
-      if (!data.containsKey('content') || data['content'] == null) {
-        updates['content'] = 'Default Content';
-      }
-      if (!data.containsKey('timestamp') || data['timestamp'] == null) {
-        updates['timestamp'] = FieldValue.serverTimestamp();
-      }
-      if (!data.containsKey('images') || data['images'] == null) {
-        updates['images'] = [];
-      }
-
-      if (updates.isNotEmpty) {
-        await docRef.update(updates);
-      }
     }
   }
 
@@ -84,13 +62,60 @@ class _NotePageState extends State<NotePage> {
         imageUrls.add(downloadUrl);
       }
 
-      await _firestore.collection('notes').doc('your_document_id').update({
+      final noteData = {
         'title': _titleController.text,
         'content': _contentController.text,
         'timestamp': FieldValue.serverTimestamp(),
         'images': imageUrls,
-      });
+      };
 
+      if (widget.noteId == null) {
+        await _firestore.collection('notes').add(noteData);
+      } else {
+        await _firestore.collection('notes').doc(widget.noteId).update(noteData);
+      }
+
+      Navigator.pop(context);
+    }
+  }
+
+  Future<void> _confirmDeleteNote() async {
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: false, // User must tap a button!
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Delete Note'),
+          content: SingleChildScrollView(
+            child: ListBody(
+              children: <Widget>[
+                Text('Are you sure you want to delete this note?'),
+              ],
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: Text('Cancel'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              child: Text('Delete'),
+              onPressed: () async {
+                await _deleteNote();
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _deleteNote() async {
+    if (widget.noteId != null) {
+      await _firestore.collection('notes').doc(widget.noteId).delete();
       Navigator.pop(context);
     }
   }
@@ -105,10 +130,15 @@ class _NotePageState extends State<NotePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.green[200],
+      backgroundColor: Colors.grey[400],
       appBar: AppBar(
         title: const Text('Note Page'),
         actions: [
+          if (widget.noteId != null)
+            IconButton(
+              icon: Icon(Icons.delete),
+              onPressed: _confirmDeleteNote,
+            ),
           IconButton(
             icon: Icon(Icons.save),
             onPressed: _saveNote,

@@ -11,24 +11,29 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  bool _showDeleteIcon = false;
+  String? _noteToDelete;
+
+  void _toggleDeleteIcon(String? noteId) {
+    setState(() {
+      _showDeleteIcon = !_showDeleteIcon;
+      _noteToDelete = noteId;
+    });
+  }
+
+  void _deleteNote() async {
+    if (_noteToDelete != null) {
+      await _firestore.collection('notes').doc(_noteToDelete).delete();
+      _toggleDeleteIcon(null);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.green[200],
+      backgroundColor: Colors.grey[400],
       appBar: AppBar(
-        title: const Column(
-          children: [
-            SizedBox(
-              width: 120,
-              height: 0,
-            ),
-            Text(
-              'hend',
-              style: TextStyle(fontSize: 30),
-            ),
-          ],
-        ),
+        title: const Text('Home', style: TextStyle(fontSize: 30)),
       ),
       body: StreamBuilder<QuerySnapshot>(
         stream: _firestore.collection('notes').snapshots(),
@@ -42,18 +47,44 @@ class _HomePageState extends State<HomePage> {
 
           final notes = snapshot.data!.docs;
 
-          return ListView.builder(
-            itemCount: notes.length,
-            itemBuilder: (context, index) {
-              final note = notes[index];
-              return ListTile(
-                title: Text(note['title']),
-                subtitle: Text(note['content']),
-                onTap: () {
-                  // Handle note tap if needed
+          return Stack(
+            children: [
+              ListView.builder(
+                itemCount: notes.length,
+                itemBuilder: (context, index) {
+                  final note = notes[index];
+                  return GestureDetector(
+                    onLongPress: () => _toggleDeleteIcon(note.id),
+                    onTap: () {
+                      if (_showDeleteIcon) {
+                        _toggleDeleteIcon(null);
+                      } else {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => NotePage(noteId: note.id),
+                          ),
+                        );
+                      }
+                    },
+                    child: ListTile(
+                      title: Text(note['title']),
+                      subtitle: Text(note['content']),
+                    ),
+                  );
                 },
-              );
-            },
+              ),
+              if (_showDeleteIcon)
+                Positioned(
+                  bottom: 16,
+                  left: MediaQuery.of(context).size.width / 2 - 28,
+                  child: FloatingActionButton(
+                    onPressed: _deleteNote,
+                    child: Icon(Icons.delete),
+                    backgroundColor: Colors.red,
+                  ),
+                ),
+            ],
           );
         },
       ),
