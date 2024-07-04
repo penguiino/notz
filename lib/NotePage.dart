@@ -1,6 +1,8 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 
 class NotePage extends StatefulWidget {
   const NotePage({Key? key}) : super(key: key);
@@ -11,9 +13,53 @@ class NotePage extends StatefulWidget {
 
 class _NotePageState extends State<NotePage> {
   List<File> _images = [];
-
   TextEditingController _titleController = TextEditingController();
   TextEditingController _contentController = TextEditingController();
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseStorage _storage = FirebaseStorage.instance;
+
+  @override
+  void initState() {
+    super.initState();
+    // Replace 'your_document_id' with the actual document ID you are working with
+    ensureFieldsExist('your_document_id');
+  }
+
+  Future<void> ensureFieldsExist(String docId) async {
+    final docRef = _firestore.collection('notes').doc(docId);
+    final docSnapshot = await docRef.get();
+
+    if (!docSnapshot.exists) {
+      // Document does not exist, create it with default values
+      await docRef.set({
+        'title': 'Default Title',
+        'content': 'Default Content',
+        'timestamp': FieldValue.serverTimestamp(), // Firestore Timestamp
+        'images': [], // Empty list for images
+      });
+    } else {
+      // Document exists, check and update missing fields
+      final data = docSnapshot.data();
+      final Map<String, dynamic> updates = {};
+
+      if (!data!.containsKey('title') || data['title'] == null) {
+        updates['title'] = 'Default Title';
+      }
+      if (!data.containsKey('content') || data['content'] == null) {
+        updates['content'] = 'Default Content';
+      }
+      if (!data.containsKey('timestamp') || data['timestamp'] == null) {
+        updates['timestamp'] = FieldValue.serverTimestamp();
+      }
+      if (!data.containsKey('images') || data['images'] == null) {
+        updates['images'] = [];
+      }
+
+      if (updates.isNotEmpty) {
+        await docRef.update(updates);
+      }
+    }
+  }
 
   Future<void> _getImage() async {
     final picker = ImagePicker();
@@ -23,6 +69,29 @@ class _NotePageState extends State<NotePage> {
       setState(() {
         _images.add(File(pickedFile.path));
       });
+    }
+  }
+
+  Future<void> _saveNote() async {
+    if (_titleController.text.isNotEmpty && _contentController.text.isNotEmpty) {
+      List<String> imageUrls = [];
+      for (File image in _images) {
+        String fileName = DateTime.now().millisecondsSinceEpoch.toString();
+        Reference ref = _storage.ref().child('images/$fileName');
+        UploadTask uploadTask = ref.putFile(image);
+        TaskSnapshot snapshot = await uploadTask;
+        String downloadUrl = await snapshot.ref.getDownloadURL();
+        imageUrls.add(downloadUrl);
+      }
+
+      await _firestore.collection('notes').doc('your_document_id').update({
+        'title': _titleController.text,
+        'content': _contentController.text,
+        'timestamp': FieldValue.serverTimestamp(),
+        'images': imageUrls,
+      });
+
+      Navigator.pop(context);
     }
   }
 
@@ -38,18 +107,13 @@ class _NotePageState extends State<NotePage> {
     return Scaffold(
       backgroundColor: Colors.green[200],
       appBar: AppBar(
-        title: const Column(
-          children: [
-            SizedBox(
-              width: 120,
-              height: 0,
-            ),
-            Text(
-              'hend',
-              style: TextStyle(fontSize: 30),
-            ),
-          ],
-        ),
+        title: const Text('Note Page'),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.save),
+            onPressed: _saveNote,
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         child: Padding(

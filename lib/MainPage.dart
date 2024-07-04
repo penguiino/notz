@@ -6,7 +6,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 
 class MainPage extends StatelessWidget{
-  const MainPage({Key? key});
+  const MainPage({super.key});
 
   @override
   Widget build(BuildContext context) {
